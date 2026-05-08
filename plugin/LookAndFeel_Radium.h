@@ -45,13 +45,15 @@ public:
     }
 
     void mouseDown(const juce::MouseEvent& e) override {
+        // isCommandDown() = Cmd on macOS, Ctrl on Win/Linux — matches the
+        // native fine-adjust convention of Logic / Pro Tools / Reaper.
         ctrlClickCandidate_ = ctrlClickResetEnabled_ &&
-                              e.mods.isCtrlDown() &&
+                              e.mods.isCommandDown() &&
                               e.mods.isLeftButtonDown();
         ctrlClickDragged_ = false;
         ctrlClickStartPosition_ = e.position;
 
-        if (e.mods.isCtrlDown()) {
+        if (e.mods.isCommandDown()) {
             // Switch to velocity mode for fine control
             setVelocityBasedMode(true);
             setVelocityModeParameters(0.4, 0, 0.0, false);

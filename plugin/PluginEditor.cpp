@@ -1827,7 +1827,9 @@ bool TriggerfishEditor::keyPressed(const juce::KeyPress& key) {
 
     const auto modifiers = key.getModifiers();
     const auto keyCode = key.getKeyCode();
-    if (modifiers.isCtrlDown() &&
+    // isCommandDown() = Cmd on macOS, Ctrl on Windows/Linux — gives the
+    // platform-native undo/redo shortcut instead of literal Ctrl on Mac.
+    if (modifiers.isCommandDown() &&
         (keyCode == 'z' || keyCode == 'Z' || keyCode == 'y' || keyCode == 'Y')) {
         if (modifiers.isShiftDown() || keyCode == 'y' || keyCode == 'Y') {
             return redoLayerEdit();

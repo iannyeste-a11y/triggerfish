@@ -1187,7 +1187,7 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& e) {
         juce::KeyPress::isKeyCurrentlyDown('f') ||
         juce::KeyPress::isKeyCurrentlyDown('F');
 
-    if (e.mods.isCtrlDown() && e.mods.isRightButtonDown()) {
+    if (e.mods.isCommandDown() && e.mods.isRightButtonDown()) {
         dragMode_ = DragMode::None;
         dragHandleRegion_ = -1;
         if (onRegionsCleared) {
@@ -1337,7 +1337,7 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& e) {
         repaint();
     }
 
-    if (e.mods.isCtrlDown() && e.mods.isLeftButtonDown()) {
+    if (e.mods.isCommandDown() && e.mods.isLeftButtonDown()) {
         int handle = findRegionHandle(static_cast<float>(e.x));
         if (handle >= 0) {
             dragMode_ = DragMode::DragHandle;
@@ -1572,11 +1572,11 @@ void WaveformComponent::mouseUp(const juce::MouseEvent& e) {
 void WaveformComponent::mouseWheelMove(const juce::MouseEvent& e,
                                         const juce::MouseWheelDetails& wheel) {
     if (!hasData_) return;
-    if (!e.mods.isCtrlDown() && !e.mods.isShiftDown()) return;
+    if (!e.mods.isCommandDown() && !e.mods.isShiftDown()) return;
 
     double range = viewEnd_ - viewStart_;
 
-    if (e.mods.isShiftDown() && !e.mods.isCtrlDown()) {
+    if (e.mods.isShiftDown() && !e.mods.isCommandDown()) {
         // Shift+wheel: scroll left/right (only when zoomed in)
         if (range >= 1.0) return;
         double scrollAmount = range * 0.15 * (wheel.deltaY > 0 ? -1.0 : 1.0);

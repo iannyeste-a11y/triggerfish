@@ -116,7 +116,8 @@ void SurroundPannerComponent::paint(juce::Graphics& g) {
 }
 
 void SurroundPannerComponent::mouseDown(const juce::MouseEvent& e) {
-    if (e.mods.isCtrlDown() && e.mods.isLeftButtonDown()) {
+    // Cmd-click on macOS, Ctrl-click on Win/Linux — resets pan to centre.
+    if (e.mods.isCommandDown() && e.mods.isLeftButtonDown()) {
         panX_ = 0.0;
         panY_ = 1.0;
         panXR_ = 0.0;

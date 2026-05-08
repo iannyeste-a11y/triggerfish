@@ -122,7 +122,9 @@ probeLightweight(const juce::String& filePath) {
 
     FreeLibrary(hModule);
 #else
-    // On non-Windows, fall back to JUCE's findAllTypesForFile
+    // On non-Windows, fall back to JUCE's findAllTypesForFile.
+    // classId must be the integer uniqueId stringified — JuceVst3Host parses
+    // it back via getIntValue() to match against PluginDescription::uniqueId.
     juce::VST3PluginFormat vst3Format;
     juce::OwnedArray<juce::PluginDescription> descriptions;
     vst3Format.findAllTypesForFile(descriptions, filePath);
@@ -130,7 +132,7 @@ probeLightweight(const juce::String& filePath) {
         Vst3PluginScanner::PluginEntry pe;
         pe.name = desc->name;
         pe.filePath = filePath;
-        pe.classId = desc->name;
+        pe.classId = juce::String(desc->uniqueId);
         pe.manufacturer = desc->manufacturerName;
         result.push_back(std::move(pe));
     }
