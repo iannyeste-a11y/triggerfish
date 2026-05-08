@@ -31,7 +31,7 @@ public:
 private:
     juce::TextButton openButton{"Open"};
     juce::TextButton addAudioButton{"Add Audio"};
-    juce::TextButton saveButton{"Save \xe2\x96\xbe"};   // ▾ hints at the dropdown menu
+    juce::TextButton saveButton{"Save"};
     juce::TextButton newButton{"New"};
     juce::TextButton databaseButton{"Database"};
     juce::TextButton pictureButton{"Picture"};

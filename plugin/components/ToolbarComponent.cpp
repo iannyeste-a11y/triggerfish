@@ -33,8 +33,8 @@ ToolbarComponent::ToolbarComponent() {
     addAudioButton.onClick = [this] { if (onAddAudio) onAddAudio(); };
     saveButton.onClick = [this] {
         juce::PopupMenu menu;
-        menu.addItem(1, "Save\xe2\x80\xa6");                       // "Save…"
-        menu.addItem(2, "Save with Audio Embedded\xe2\x80\xa6");   // "Save with Audio Embedded…"
+        menu.addItem(1, "Save...");
+        menu.addItem(2, "Save with Audio Embedded...");
         menu.showMenuAsync(
             juce::PopupMenu::Options().withTargetComponent(&saveButton),
             [this](int result) {
@@ -97,7 +97,7 @@ void ToolbarComponent::resized() {
     area.removeFromLeft(4);
     addAudioButton.setBounds(area.removeFromLeft(86).withHeight(bh));
     area.removeFromLeft(4);
-    saveButton.setBounds(area.removeFromLeft(64).withHeight(bh));
+    saveButton.setBounds(area.removeFromLeft(50).withHeight(bh));
     area.removeFromLeft(4);
     databaseButton.setBounds(area.removeFromLeft(74).withHeight(bh));
     area.removeFromLeft(4);
