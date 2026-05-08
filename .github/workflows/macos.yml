@@ -1,0 +1,65 @@
+name: macOS Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Triggerfish (macOS Universal)
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache JUCE FetchContent
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-8.0.4-${{ runner.os }}
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -G Xcode \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build Standalone
+        run: cmake --build build --config Release --target Triggerfish_Standalone
+
+      - name: Locate .app bundle
+        id: locate
+        run: |
+          APP_PATH=$(find build -type d -name "Triggerfish 1.0.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found" >&2
+            find build -name "*.app" -type d
+            exit 1
+          fi
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found: $APP_PATH"
+
+      - name: Ad-hoc sign (lets it launch on Apple Silicon without a Dev account)
+        run: codesign --force --deep --sign - "${{ steps.locate.outputs.app_path }}"
+
+      - name: Verify signature
+        run: codesign -dvv "${{ steps.locate.outputs.app_path }}" || true
+
+      - name: Stage release folder
+        run: |
+          STAGE="dist/Triggerfish 1.0"
+          mkdir -p "$STAGE"
+          cp -R "${{ steps.locate.outputs.app_path }}" "$STAGE/"
+          touch "$STAGE/Triggerfish.portable"
+          mkdir -p "$STAGE/Data"
+          ls -la "$STAGE"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Triggerfish-1.0-macOS-Universal
+          path: dist/
+          if-no-files-found: error

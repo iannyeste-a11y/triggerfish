@@ -1,0 +1,61 @@
+# Local backup archives and generated data
+backups/
+artifacts/
+dist/
+sesssion_saves/
+.claude/
+
+# Build trees
+build/
+build-*/
+_deps/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+*.vcxproj.user
+*.suo
+.vs/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Macros / OS junk
+.DS_Store
+
+# Local one-off files
+backup_before_vst_tuning.zip
+build_err.txt
+
+# Source backup snapshots
+src_backup_*/
+
+# Licensed Soundminer fixture corpus — never commit
+fixtures/
+
+# Loose root-level assets — the canonical icon lives in plugin/assets/
+/triggerfish_icon.png
+/Triggerfish logo.png
+
+# Common compiler/debug outputs
+*.obj
+*.o
+*.pdb
+*.ilk
+*.lib
+*.exp
+*.idb
+*.ipch
+*.pch
+*.log
+*.tmp
+*.cache
+*.exe
+*.dll
+*.dylib
+*.so
+*.a

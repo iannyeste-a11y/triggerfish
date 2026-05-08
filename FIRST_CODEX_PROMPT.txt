@@ -1,0 +1,41 @@
+Read AGENTS.md and follow it strictly.
+
+This is a Windows-first project.
+The shipping app must run natively on Windows 10.
+You may assume development happens in WSL on a Windows 10 host, but do not treat Linux as the target runtime.
+
+Create the first milestone only:
+
+Milestone 1: a headless `.radium` parser and extractor with tests.
+
+Requirements:
+- Use a native stack suitable for a future Windows desktop audio app
+- Implement a parser that opens `.radium` files as SQLite when possible
+- Read and inspect the `schema`, `radiumpresets`, and `radiumdata` tables
+- Extract embedded FLAC assets from `radiumdata`
+- Locate and inflate compressed preset chunks where possible
+- Detect repeated slot-group structure and report active vs inactive slots
+- Produce a deterministic JSON summary per input file
+
+Create:
+1. a small CLI tool that accepts a `.radium` path or a fixture directory
+2. a JSON summary output format
+3. extracted embedded media written to an output directory
+4. automated tests against all fixture files in `fixtures/radium`
+
+Implementation constraints:
+- do not build the UI yet
+- do not implement audio playback yet
+- do not attempt native `.radium` export
+- do not attempt any reverse engineering of Soundminer binaries
+- preserve unknown data as raw metadata instead of guessing
+- keep Windows 10 runtime compatibility in mind for all choices
+
+Validation:
+- run tests across every fixture file
+- show one example JSON summary
+- show the extracted asset count per fixture
+- list any format assumptions that remain uncertain
+- include notes for how this milestone will be built and run on Windows 10
+
+Before coding, summarize the plan and the files you intend to create.
