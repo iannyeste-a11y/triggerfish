@@ -8,18 +8,22 @@ constexpr const char* kPortableMarkerFilename = "Triggerfish.portable";
 constexpr const char* kPortableDataSubfolder = "Data";
 constexpr const char* kAppFolderName = "Triggerfish";
 
-juce::File executableFolder() {
-    return juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+juce::File applicationFolder() {
+    // currentApplicationFile resolves to the .exe on Windows and to the .app
+    // bundle on macOS, so its parent is the folder the user sees containing
+    // the app — which is where we want to look for the portable marker and
+    // place the Data/ subfolder.
+    return juce::File::getSpecialLocation(juce::File::currentApplicationFile)
         .getParentDirectory();
 }
 
 bool portableMarkerPresent() {
-    return executableFolder().getChildFile(kPortableMarkerFilename).existsAsFile();
+    return applicationFolder().getChildFile(kPortableMarkerFilename).existsAsFile();
 }
 
 juce::File computeRoot() {
     if (portableMarkerPresent()) {
-        return executableFolder()
+        return applicationFolder()
             .getChildFile(kPortableDataSubfolder)
             .getChildFile(kAppFolderName);
     }

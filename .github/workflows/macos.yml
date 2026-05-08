@@ -3,7 +3,11 @@ name: macOS Build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write   # needed for the release-on-tag step
 
 jobs:
   build:
@@ -64,3 +68,40 @@ jobs:
           name: Triggerfish-1.0-macOS-Universal
           path: dist/
           if-no-files-found: error
+
+      # The steps below run only when the push that triggered this workflow
+      # was a version tag (e.g. v1.0.1). They zip up the staged folder and
+      # publish or update a GitHub Release with the zip attached.
+      - name: Zip release package
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd dist
+          # ditto preserves macOS metadata (resource forks, signatures) better
+          # than zip and matches what Apple recommends for distributing .app
+          # bundles. The output filename embeds the tag for clarity.
+          ditto -c -k --keepParent "Triggerfish 1.0" "Triggerfish-${{ github.ref_name }}-macOS.zip"
+          ls -la
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          ZIP="dist/Triggerfish-${TAG}-macOS.zip"
+          NOTES="Automated macOS build from tag ${TAG}.
+
+          Universal binary (Apple Silicon + Intel). Requires macOS 11 or later.
+
+          **First launch:** right-click \`Triggerfish 1.0.app\` and choose **Open**, then click **Open** in the security dialog. On macOS Sequoia, instead go to **System Settings → Privacy & Security** and click **Open Anyway**. After the first launch, double-click works normally.
+
+          The app is not code-signed or notarized — the right-click flow is required because no paid Apple Developer ID has been used to sign the build."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — uploading asset (overwriting if present)."
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            echo "Creating new release $TAG."
+            gh release create "$TAG" "$ZIP" \
+              --title "Triggerfish $TAG" \
+              --notes "$NOTES"
+          fi
