@@ -61,7 +61,9 @@ private:
 #if JUCE_WINDOWS
     juce::HWNDComponent videoHost_;
 #else
-    juce::VideoComponent videoComponent_;
+    // JUCE's VideoComponent has no default constructor — pass false to use
+    // our own play/pause/seek controls rather than the OS-native overlay.
+    juce::VideoComponent videoComponent_{false};
 #endif
     juce::File currentVideoFile_;
     bool hasLoadedVideo_ = false;
