@@ -579,8 +579,9 @@ TriggerfishEditor::TriggerfishEditor(TriggerfishProcessor& p)
     };
     dopplerCurveType_.onChange = dopplerSegmentShapeChanged;
     dopplerCurveAmount_.onValueChange = dopplerSegmentShapeChanged;
-    toolbar_.onSave = [this] {
-        // Snapshot ALL layers' VST3 plugin state before saving
+    auto snapshotPluginStates = [this] {
+        // Snapshot ALL layers' VST3 plugin state into the controller so the
+        // save path can write whatever plugins are currently loaded.
         for (auto& [layerIdx, hosts] : layerHosts_) {
             auto plugins = processorRef.controller().layer_vst3_plugins(layerIdx);
             for (std::size_t i = 0; i < radium::StreamingMixer::kMaxPluginSlots; ++i) {
@@ -610,7 +611,10 @@ TriggerfishEditor::TriggerfishEditor(TriggerfishProcessor& p)
                 processorRef.controller().set_aux_vst3_plugin(i, ps);
             }
         }
+    };
 
+    toolbar_.onSave = [this, snapshotPluginStates] {
+        snapshotPluginStates();
         auto chooser = std::make_shared<juce::FileChooser>(
             "Save Project", juce::File(), "*.tfproj");
         chooser->launchAsync(juce::FileBrowserComponent::saveMode, [this, chooser](const juce::FileChooser& fc) {
@@ -621,6 +625,34 @@ TriggerfishEditor::TriggerfishEditor(TriggerfishProcessor& p)
                 toolbar_.setProjectName(file.getFileNameWithoutExtension());
                 layerList_.setProjectName(file.getFileNameWithoutExtension());
             }
+        });
+    };
+
+    toolbar_.onSaveWithAudio = [this, snapshotPluginStates] {
+        snapshotPluginStates();
+        auto chooser = std::make_shared<juce::FileChooser>(
+            "Save Project with Audio Embedded", juce::File(), "*.tfproj");
+        chooser->launchAsync(juce::FileBrowserComponent::saveMode, [this, chooser](const juce::FileChooser& fc) {
+            auto file = fc.getResult();
+            if (file == juce::File()) return;
+            std::string err;
+            // Embedding can take noticeable time on large sessions because every
+            // source buffer is FLAC-encoded; running on the message thread is
+            // OK for now since saves are user-initiated and infrequent.
+            const bool ok = processorRef.controller().save_project_with_audio(
+                file.getFullPathName().toStdString(), &err);
+            if (!ok) {
+                juce::AlertWindow::showAsync(
+                    juce::MessageBoxOptions()
+                        .withIconType(juce::MessageBoxIconType::WarningIcon)
+                        .withTitle("Save Failed")
+                        .withMessage(juce::String("Could not save project: ") + juce::String(err))
+                        .withButton("OK"),
+                    nullptr);
+                return;
+            }
+            toolbar_.setProjectName(file.getFileNameWithoutExtension());
+            layerList_.setProjectName(file.getFileNameWithoutExtension());
         });
     };
     toolbar_.onOpen = [this] {

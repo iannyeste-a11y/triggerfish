@@ -16,6 +16,7 @@ public:
     std::function<void()> onOpen;
     std::function<void()> onAddAudio;
     std::function<void()> onSave;
+    std::function<void()> onSaveWithAudio;
     std::function<void()> onNew;
     std::function<void()> onPicture;
     std::function<void()> onSearch;
@@ -30,7 +31,7 @@ public:
 private:
     juce::TextButton openButton{"Open"};
     juce::TextButton addAudioButton{"Add Audio"};
-    juce::TextButton saveButton{"Save"};
+    juce::TextButton saveButton{"Save \xe2\x96\xbe"};   // ▾ hints at the dropdown menu
     juce::TextButton newButton{"New"};
     juce::TextButton databaseButton{"Database"};
     juce::TextButton pictureButton{"Picture"};

@@ -31,7 +31,20 @@ ToolbarComponent::ToolbarComponent() {
     newButton.onClick = [this] { if (onNew) onNew(); };
     openButton.onClick = [this] { if (onOpen) onOpen(); };
     addAudioButton.onClick = [this] { if (onAddAudio) onAddAudio(); };
-    saveButton.onClick = [this] { if (onSave) onSave(); };
+    saveButton.onClick = [this] {
+        juce::PopupMenu menu;
+        menu.addItem(1, "Save\xe2\x80\xa6");                       // "Save…"
+        menu.addItem(2, "Save with Audio Embedded\xe2\x80\xa6");   // "Save with Audio Embedded…"
+        menu.showMenuAsync(
+            juce::PopupMenu::Options().withTargetComponent(&saveButton),
+            [this](int result) {
+                if (result == 1 && onSave) {
+                    onSave();
+                } else if (result == 2 && onSaveWithAudio) {
+                    onSaveWithAudio();
+                }
+            });
+    };
     databaseButton.onClick = [this] { if (onDatabaseMenu) onDatabaseMenu(); };
     pictureButton.onClick = [this] { if (onPicture) onPicture(); };
     searchButton.onClick = [this] { if (onSearch) onSearch(); };
@@ -84,7 +97,7 @@ void ToolbarComponent::resized() {
     area.removeFromLeft(4);
     addAudioButton.setBounds(area.removeFromLeft(86).withHeight(bh));
     area.removeFromLeft(4);
-    saveButton.setBounds(area.removeFromLeft(50).withHeight(bh));
+    saveButton.setBounds(area.removeFromLeft(64).withHeight(bh));
     area.removeFromLeft(4);
     databaseButton.setBounds(area.removeFromLeft(74).withHeight(bh));
     area.removeFromLeft(4);

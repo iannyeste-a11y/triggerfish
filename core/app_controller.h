@@ -183,6 +183,22 @@ using AudioDecodeFunc = std::function<FixtureAudioDecodeResult(
     const std::filesystem::path& audio_path,
     const std::filesystem::path& working_directory)>;
 
+// In-memory representation of audio embedded in a project file.
+// `bytes` holds an encoded audio container (FLAC) so that source audio can be
+// shipped inside a .tfproj without depending on external file paths.
+struct EmbeddedAudioBlob {
+    int sample_rate = 0;
+    int channels = 0;
+    std::vector<std::uint8_t> bytes;
+};
+
+// Encodes an in-memory AudioBuffer into a serializable EmbeddedAudioBlob.
+using AudioEncodeFunc = std::function<EmbeddedAudioBlob(const AudioBuffer&)>;
+
+// Decodes an EmbeddedAudioBlob back into a FixtureAudioDecodeResult.
+using AudioDecodeBytesFunc = std::function<FixtureAudioDecodeResult(
+    const EmbeddedAudioBlob& blob)>;
+
 class AppController {
 public:
     static constexpr std::size_t kPluginInsertSlotCount = 5;
@@ -304,6 +320,8 @@ public:
 
     explicit AppController(std::filesystem::path working_directory);
     void set_audio_decode_func(AudioDecodeFunc func);
+    void set_audio_encode_func(AudioEncodeFunc func);
+    void set_audio_decode_bytes_func(AudioDecodeBytesFunc func);
     void set_output_sample_rate(int sample_rate);
 
     bool import_file(const std::filesystem::path& radium_path);
@@ -509,6 +527,10 @@ public:
     bool replace_layer_audio(std::size_t layer_index, const std::filesystem::path& audio_path, std::string* error_message);
     bool clear_layer_audio(std::size_t layer_index, std::string* error_message);
     bool save_project(const std::filesystem::path& output_path, std::string* error_message) const;
+    // Saves a fully self-contained .tfproj that bundles every layer source
+    // audio buffer inside the file (FLAC-encoded). The resulting file can be
+    // shared and opened on a machine that does not have the original audio.
+    bool save_project_with_audio(const std::filesystem::path& output_path, std::string* error_message) const;
     bool load_project(const std::filesystem::path& input_path, std::string* error_message);
 
     bool start_streaming_audition(std::size_t layer_index, std::string* error_message);
@@ -549,6 +571,8 @@ private:
     static RenderedAudio slice_audio_from_frame(const RenderedAudio& audio, std::size_t start_frame);
 
     AudioDecodeFunc audio_decode_func_;
+    AudioEncodeFunc audio_encode_func_;
+    AudioDecodeBytesFunc audio_decode_bytes_func_;
     int output_sample_rate_ = 48000;
     std::filesystem::path working_directory_;
     std::filesystem::path session_recordings_directory_;

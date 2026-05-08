@@ -14,6 +14,8 @@ TriggerfishProcessor::TriggerfishProcessor()
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       controller_(getWorkingDirectory().getFullPathName().toStdString()) {
     controller_.set_audio_decode_func(triggerfish::make_juce_audio_decode_func());
+    controller_.set_audio_encode_func(triggerfish::make_juce_flac_encode_func());
+    controller_.set_audio_decode_bytes_func(triggerfish::make_juce_flac_decode_bytes_func());
     controller_.new_empty_project();
 }
 

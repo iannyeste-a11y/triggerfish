@@ -7,7 +7,9 @@
 #include <iomanip>
 #include <fstream>
 #include <limits>
+#include <map>
 #include <sstream>
+#include <unordered_set>
 
 namespace radium {
 namespace {
@@ -938,6 +940,14 @@ AppController::AppController(std::filesystem::path working_directory)
 
 void AppController::set_audio_decode_func(AudioDecodeFunc func) {
     audio_decode_func_ = std::move(func);
+}
+
+void AppController::set_audio_encode_func(AudioEncodeFunc func) {
+    audio_encode_func_ = std::move(func);
+}
+
+void AppController::set_audio_decode_bytes_func(AudioDecodeBytesFunc func) {
+    audio_decode_bytes_func_ = std::move(func);
 }
 
 void AppController::set_output_sample_rate(int sample_rate) {
@@ -4357,6 +4367,7 @@ bool AppController::save_project(const std::filesystem::path& output_path, std::
         }
         return false;
     }
+    const std::map<std::string, EmbeddedAudioBlob> empty_embedded;
     return save_project_file(
         output_path,
         imported_preset_,
@@ -4370,6 +4381,67 @@ bool AppController::save_project(const std::filesystem::path& output_path, std::
         session_recordings_directory_,
         session_recordings_,
         selected_session_recording_index_,
+        empty_embedded,
+        error_message
+    );
+}
+
+bool AppController::save_project_with_audio(const std::filesystem::path& output_path, std::string* error_message) const {
+    if (!has_imported_preset()) {
+        if (error_message != nullptr) {
+            *error_message = "No preset or project is loaded.";
+        }
+        return false;
+    }
+    if (!audio_encode_func_) {
+        if (error_message != nullptr) {
+            *error_message = "Audio encoder is not configured.";
+        }
+        return false;
+    }
+
+    // Collect every buffer_id referenced as a *source* (skip rendered buffers
+    // since the receiver can re-render edit states from the source clips).
+    std::unordered_set<std::string> source_ids;
+    for (const auto& layer : imported_preset_.layers) {
+        for (const auto& src : layer.sources) {
+            if (src.buffer_id.has_value() && !src.buffer_id->empty()) {
+                source_ids.insert(*src.buffer_id);
+            }
+        }
+    }
+    for (const auto& edit_state : layer_edit_states_) {
+        if (!edit_state.has_value()) continue;
+        for (const auto& clip : edit_state->clips) {
+            if (!clip.source_buffer_id.empty()) {
+                source_ids.insert(clip.source_buffer_id);
+            }
+        }
+    }
+
+    std::map<std::string, EmbeddedAudioBlob> embedded;
+    for (const auto& buffer_id : source_ids) {
+        const auto it = project_audio_buffers_.find(buffer_id);
+        if (it == project_audio_buffers_.end() || it->second.frame_count() == 0) {
+            continue;
+        }
+        embedded[buffer_id] = audio_encode_func_(it->second);
+    }
+
+    return save_project_file(
+        output_path,
+        imported_preset_,
+        layer_overrides_,
+        layer_edit_states_,
+        aux_track_state_,
+        record_bus_mode_,
+        trigger_mode_,
+        octave_,
+        project_picture_path_,
+        session_recordings_directory_,
+        session_recordings_,
+        selected_session_recording_index_,
+        embedded,
         error_message
     );
 }
@@ -4386,6 +4458,7 @@ bool AppController::load_project(const std::filesystem::path& input_path, std::s
     std::filesystem::path recordings_directory;
     std::vector<SessionRecordingInfo> session_recordings;
     std::optional<std::size_t> selected_session_recording_index;
+    std::map<std::string, EmbeddedAudioBlob> embedded_audio;
     if (!load_project_file(
             input_path,
             preset,
@@ -4399,6 +4472,7 @@ bool AppController::load_project(const std::filesystem::path& input_path, std::s
             recordings_directory,
             session_recordings,
             selected_session_recording_index,
+            embedded_audio,
             error_message)) {
         return false;
     }
@@ -4466,6 +4540,21 @@ bool AppController::load_project(const std::filesystem::path& input_path, std::s
             if (buffers.find(bufferId) != buffers.end()) {
                 continue;
             }
+
+            // V24 files may have audio embedded directly. Try that first so
+            // the project opens fully even when the original file is missing.
+            const auto embIt = embedded_audio.find(bufferId);
+            if (embIt != embedded_audio.end() && audio_decode_bytes_func_) {
+                auto decode_emb = audio_decode_bytes_func_(embIt->second);
+                diagnostics.insert(diagnostics.end(),
+                                   decode_emb.diagnostics.begin(),
+                                   decode_emb.diagnostics.end());
+                if (decode_emb.success) {
+                    buffers.emplace(bufferId, std::move(decode_emb.audio));
+                    continue;
+                }
+            }
+
             const auto decode = decode_audio(*mediaPath, working_directory_ / "decoded_local");
             diagnostics.insert(diagnostics.end(), decode.diagnostics.begin(), decode.diagnostics.end());
             if (decode.success) {

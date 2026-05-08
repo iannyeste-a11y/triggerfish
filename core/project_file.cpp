@@ -31,6 +31,7 @@ constexpr const char* kHeaderV20 = "RADIUM_IMPORTER_PROJECT_V20";
 constexpr const char* kHeaderV21 = "RADIUM_IMPORTER_PROJECT_V21";
 constexpr const char* kHeaderV22 = "RADIUM_IMPORTER_PROJECT_V22";
 constexpr const char* kHeaderV23 = "RADIUM_IMPORTER_PROJECT_V23";
+constexpr const char* kHeaderV24 = "RADIUM_IMPORTER_PROJECT_V24";
 
 template <typename T>
 void write_optional(std::ostream& out, const std::optional<T>& value) {
@@ -126,6 +127,7 @@ bool save_project_file(
     const std::filesystem::path& session_recordings_directory,
     const std::vector<SessionRecordingInfo>& session_recordings,
     std::optional<std::size_t> selected_session_recording_index,
+    const std::map<std::string, EmbeddedAudioBlob>& embedded_audio,
     std::string* error_message
 ) {
     std::ofstream out(output_path);
@@ -136,7 +138,9 @@ bool save_project_file(
         return false;
     }
 
-    out << kHeaderV23 << '\n';
+    // Always write the V24 header. Files without embedded audio simply have
+    // an empty embedded_audio_count line — same on-disk size as V23.
+    out << kHeaderV24 << '\n';
     out << "preset_name " << std::quoted(preset.name) << '\n';
     out << "source_file " << std::quoted(preset.source_file.string()) << '\n';
     out << "trigger_mode " << (trigger_mode == TriggerMode::kOneShot ? "one_shot" : "continuous") << '\n';
@@ -418,6 +422,17 @@ bool save_project_file(
         }
     }
 
+    // V24: optional embedded audio section. The count is always written so
+    // readers can rely on its presence; a count of 0 means "no embedded audio".
+    out << "embedded_audio_count " << embedded_audio.size() << '\n';
+    for (const auto& [buffer_id, blob] : embedded_audio) {
+        out << "embedded_audio "
+            << std::quoted(buffer_id) << ' '
+            << blob.sample_rate << ' '
+            << blob.channels << ' '
+            << std::quoted(bytes_to_hex(blob.bytes)) << '\n';
+    }
+
     return true;
 }
 
@@ -434,8 +449,10 @@ bool load_project_file(
     std::filesystem::path& session_recordings_directory,
     std::vector<SessionRecordingInfo>& session_recordings,
     std::optional<std::size_t>& selected_session_recording_index,
+    std::map<std::string, EmbeddedAudioBlob>& embedded_audio,
     std::string* error_message
 ) {
+    embedded_audio.clear();
     std::ifstream in(input_path);
     if (!in) {
         if (error_message != nullptr) {
@@ -445,7 +462,7 @@ bool load_project_file(
     }
 
     std::string line;
-    if (!std::getline(in, line) || (line != kHeaderV1 && line != kHeaderV2 && line != kHeaderV3 && line != kHeaderV4 && line != kHeaderV5 && line != kHeaderV6 && line != kHeaderV7 && line != kHeaderV8 && line != kHeaderV9 && line != kHeaderV10 && line != kHeaderV11 && line != kHeaderV12 && line != kHeaderV13 && line != kHeaderV14 && line != kHeaderV15 && line != kHeaderV16 && line != kHeaderV17 && line != kHeaderV18 && line != kHeaderV19 && line != kHeaderV20 && line != kHeaderV21 && line != kHeaderV22 && line != kHeaderV23)) {
+    if (!std::getline(in, line) || (line != kHeaderV1 && line != kHeaderV2 && line != kHeaderV3 && line != kHeaderV4 && line != kHeaderV5 && line != kHeaderV6 && line != kHeaderV7 && line != kHeaderV8 && line != kHeaderV9 && line != kHeaderV10 && line != kHeaderV11 && line != kHeaderV12 && line != kHeaderV13 && line != kHeaderV14 && line != kHeaderV15 && line != kHeaderV16 && line != kHeaderV17 && line != kHeaderV18 && line != kHeaderV19 && line != kHeaderV20 && line != kHeaderV21 && line != kHeaderV22 && line != kHeaderV23 && line != kHeaderV24)) {
         if (error_message != nullptr) {
             *error_message = "Project file header was invalid.";
         }
@@ -1266,6 +1283,32 @@ bool load_project_file(
                 return false;
             }
             current_edit_state->value().clips.push_back(std::move(clip));
+        } else if (keyword == "embedded_audio_count") {
+            // Just announces how many entries follow; no per-entry state needed.
+        } else if (keyword == "embedded_audio") {
+            std::string buffer_id;
+            int sample_rate = 0;
+            int channels = 0;
+            std::string hex;
+            if (!(parser >> std::quoted(buffer_id)
+                         >> sample_rate
+                         >> channels
+                         >> std::quoted(hex))) {
+                if (error_message != nullptr) {
+                    *error_message = "Project file embedded_audio entry was invalid.";
+                }
+                return false;
+            }
+            EmbeddedAudioBlob blob;
+            blob.sample_rate = sample_rate;
+            blob.channels = channels;
+            if (!hex.empty() && !hex_to_bytes(hex, &blob.bytes)) {
+                if (error_message != nullptr) {
+                    *error_message = "Project file embedded_audio bytes were invalid.";
+                }
+                return false;
+            }
+            embedded_audio[buffer_id] = std::move(blob);
         }
     }
 
