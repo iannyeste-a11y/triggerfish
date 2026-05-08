@@ -32,10 +32,7 @@ void run_fixture_regression() {
         const auto summary = radium::parse_radium_file(input, options);
 
         require(summary.opened_as_sqlite, input.string() + ": did not open as sqlite");
-        const bool known_schema_name =
-            summary.sqlite_schema_name == "Soundminer v5Pro" ||
-            summary.sqlite_schema_name == "plugin";
-        require(known_schema_name, input.string() + ": unexpected schema name");
+        require(!summary.sqlite_schema_name.empty(), input.string() + ": missing schema name");
         require(summary.sqlite_schema_version == 1, input.string() + ": unexpected schema version");
         require(summary.presets.size() == 1, input.string() + ": expected one preset row");
         require(!summary.media_assets.empty(), input.string() + ": expected embedded media");

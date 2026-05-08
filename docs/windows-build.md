@@ -32,4 +32,4 @@ Current embedded-audio note:
 - The real fixture-audio path still depends on `ffmpeg.exe` being available on the Windows machine.
 - In the current dev environment this was validated with a Chocolatey-installed `ffmpeg` at `C:\ProgramData\chocolatey\bin\ffmpeg.exe`.
 
-The parser only reads `.radium` files, writes extracted embedded media, and writes deterministic JSON summaries. It does not require Soundminer or any plugin host on the target machine.
+The parser only reads `.radium` files, writes extracted embedded media, and writes deterministic JSON summaries. It does not require any third-party authoring application or plugin host on the target machine.

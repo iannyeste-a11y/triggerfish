@@ -27,7 +27,7 @@ Implementation constraints:
 - do not build the UI yet
 - do not implement audio playback yet
 - do not attempt native `.radium` export
-- do not attempt any reverse engineering of Soundminer binaries
+- do not attempt any reverse engineering of any third-party application binaries
 - preserve unknown data as raw metadata instead of guessing
 - keep Windows 10 runtime compatibility in mind for all choices
 

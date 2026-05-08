@@ -1,6 +1,6 @@
 # Radium Importer
 
-`Radium Importer` is a Windows-first desktop app for importing Soundminer `.radium` presets and rebuilding a practical subset of Radium for layered sound design.
+`Triggerfish` is a Windows-first desktop app for importing layered `.radium` presets and providing a practical sound-design environment for working with them.
 
 The project is intentionally focused on two real workflows:
 
@@ -13,7 +13,7 @@ The project is intentionally focused on two real workflows:
    - Example: fire, machinery, texture beds
    - Layers can sustain while held and later stop on release
 
-This is not a Soundminer clone and it is not trying to reproduce every control in the full Radium manual.
+This is not a clone of any third-party tool and it is not trying to reproduce every control in any reference manual.
 
 ## Platform
 
@@ -393,10 +393,6 @@ Even though the code now contains VST3 hosting work, the core purpose of the app
 The app is most valuable when it helps turn imported Radium presets into editable, triggerable layered assets that can be previewed, refined, and rendered locally.
 
 ## Reference
-
-Public workflow reference used as guidance:
-
-- https://info.soundminer.com/docs/radium-interface
 
 Windows build notes:
 

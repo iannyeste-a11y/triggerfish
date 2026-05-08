@@ -14,8 +14,6 @@ struct LibraryDescriptor {
     juce::File databaseFile;
     juce::File rootFolder;
     int fileCount = 0;
-    int unresolvedFileCount = 0;
-    bool isSoundminerImport = false;
 };
 
 struct LibrarySearchResult {

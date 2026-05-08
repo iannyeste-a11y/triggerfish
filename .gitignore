@@ -34,7 +34,7 @@ build_err.txt
 # Source backup snapshots
 src_backup_*/
 
-# Licensed Soundminer fixture corpus — never commit
+# Licensed third-party fixture corpus — never commit
 fixtures/
 
 # Loose root-level assets — the canonical icon lives in plugin/assets/

@@ -2,7 +2,7 @@
 
 ## Project goal
 
-Build a Windows-first desktop app that imports Soundminer `.radium` preset files and provides a practical subset of Radium focused on layered sound design for two use cases:
+Build a Windows-first desktop app that imports layered `.radium` preset files and provides a practical sound-design environment focused on layered work for two use cases:
 
 1. One-shot synced events
    - Example: creature footsteps
@@ -53,11 +53,11 @@ Linux may be used only as a development environment.
 ## Hard boundaries
 
 Do NOT:
-- decompile, disassemble, patch, or inspect Soundminer binaries
-- attempt dynamic reverse engineering of the Soundminer application
-- attempt plugin binary compatibility with Soundminer
+- decompile, disassemble, patch, or inspect any third-party application binaries
+- attempt dynamic reverse engineering of any third-party application
+- attempt binary plugin compatibility with any third-party application
 - attempt AAX or VST hosting in v1
-- attempt a full Soundminer clone
+- attempt to clone any third-party application
 - attempt full native `.radium` authoring or export in v1
 
 Work only from:
@@ -181,7 +181,7 @@ Audio correctness is more important than fancy UI.
 - Audio file handling must work with common Windows user workflows
 - Keep build instructions clear for Windows users
 - If any helper scripts are needed, prefer cross-platform Python or simple shell commands that can be translated easily to PowerShell
-- Do not require Pro Tools, AAX, ASIO-specific work, or Soundminer to be installed for v1
+- Do not require Pro Tools, AAX, ASIO-specific work, or any third-party authoring application to be installed for v1
 - If low-level driver selection is introduced later, keep a safe Windows default path first
 
 ## UX guidance
@@ -231,13 +231,13 @@ The project is successful when it can:
 ## Non-goals for v1
 
 - native `.radium` export
-- Soundminer database integration
+- third-party application database integration
 - third-party plugin hosting
-- exact match for all Radium DSP or modulation behavior
+- exact match for all third-party DSP or modulation behavior
 - AAX integration
 - Pro Tools integration
 - cloud sync or collaboration features
-- sample library management at Soundminer scale
+- large-scale sample library management
 
 ## Development order
 

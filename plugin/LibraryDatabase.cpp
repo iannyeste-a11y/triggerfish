@@ -3,30 +3,12 @@
 
 #include <sqlite3.h>
 #include <algorithm>
-#include <array>
-#include <cctype>
 #include <map>
 #include <regex>
-#include <unordered_set>
-
-#if JUCE_WINDOWS
-#define NOMINMAX
-#include <windows.h>
-#endif
 
 namespace triggerfish {
 
 namespace {
-
-struct ResolvedImportRecord {
-    juce::String originalPath;
-    juce::String resolvedPath;
-    juce::String filename;
-    juce::String folder;
-    juce::String extension;
-    std::int64_t fileSize = 0;
-    std::int64_t modifiedTimeMs = 0;
-};
 
 class ScopedStatement {
 public:
@@ -70,72 +52,6 @@ private:
 
 juce::File appDataRoot() {
     return triggerfish::portableDataRoot();
-}
-
-juce::Array<juce::File> soundminerDatabaseFolderCandidates() {
-    juce::Array<juce::File> candidates;
-
-#if JUCE_WINDOWS
-    auto roaming = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    candidates.addIfNotAlreadyThere(roaming.getChildFile("SMData").getChildFile("Databases"));
-#elif JUCE_MAC
-    auto home = juce::File::getSpecialLocation(juce::File::userHomeDirectory);
-    candidates.addIfNotAlreadyThere(home.getChildFile("Library")
-                                        .getChildFile("Application Support")
-                                        .getChildFile("SMData")
-                                        .getChildFile("Databases"));
-    candidates.addIfNotAlreadyThere(juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                                        .getChildFile("SMData")
-                                        .getChildFile("Databases"));
-#else
-    candidates.addIfNotAlreadyThere(juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                                        .getChildFile("SMData")
-                                        .getChildFile("Databases"));
-#endif
-
-    return candidates;
-}
-
-juce::Array<juce::File> soundminerSidecarCandidates() {
-    juce::Array<juce::File> candidates;
-
-#if JUCE_WINDOWS
-    auto roaming = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    candidates.addIfNotAlreadyThere(roaming.getChildFile("Soundminer").getChildFile("SideCar_Database.sqlite"));
-#elif JUCE_MAC
-    auto home = juce::File::getSpecialLocation(juce::File::userHomeDirectory);
-    candidates.addIfNotAlreadyThere(home.getChildFile("Library")
-                                        .getChildFile("Application Support")
-                                        .getChildFile("Soundminer")
-                                        .getChildFile("SideCar_Database.sqlite"));
-    candidates.addIfNotAlreadyThere(juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                                        .getChildFile("Soundminer")
-                                        .getChildFile("SideCar_Database.sqlite"));
-#else
-    candidates.addIfNotAlreadyThere(juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                                        .getChildFile("Soundminer")
-                                        .getChildFile("SideCar_Database.sqlite"));
-#endif
-
-    return candidates;
-}
-
-juce::File firstExistingDirectory(const juce::Array<juce::File>& candidates) {
-    for (const auto& candidate : candidates) {
-        if (candidate.isDirectory()) {
-            return candidate;
-        }
-    }
-    return {};
-}
-
-juce::File firstExistingFile(const juce::Array<juce::File>& candidates) {
-    for (const auto& candidate : candidates) {
-        if (candidate.existsAsFile()) {
-            return candidate;
-        }
-    }
-    return {};
 }
 
 juce::String sqliteError(sqlite3* db, const juce::String& fallback = "SQLite error") {
@@ -209,19 +125,6 @@ juce::String buildSearchText(const juce::File& file, const juce::String& metadat
     return normaliseForSearch(parts.joinIntoString(" "));
 }
 
-juce::String buildSearchTextForResolvedFile(const ResolvedImportRecord& record,
-                                            const juce::String& metadataSummary) {
-    juce::StringArray parts;
-    parts.add(record.filename);
-    parts.add(record.filename + "." + record.extension);
-    parts.add(record.folder);
-    parts.add(record.resolvedPath);
-    if (metadataSummary.isNotEmpty()) {
-        parts.add(metadataSummary);
-    }
-    return normaliseForSearch(parts.joinIntoString(" "));
-}
-
 juce::String combineMetadataSummary(const juce::String& description,
                                     const juce::String& keywords,
                                     const juce::String& category,
@@ -247,240 +150,6 @@ juce::String combineMetadataSummary(const juce::String& description,
         parts.add("Library: " + library.trim());
     }
     return trimSummary(parts.joinIntoString(" | "));
-}
-
-juce::String normaliseVolumeKey(const juce::String& text) {
-    juce::String key;
-    for (auto ch : text) {
-        if (juce::CharacterFunctions::isLetterOrDigit(ch)) {
-            key << juce::CharacterFunctions::toLowerCase(ch);
-        }
-    }
-    return key;
-}
-
-#if JUCE_WINDOWS
-bool readSharedFileBytes(const juce::File& file, juce::MemoryBlock& bytes, juce::String& error) {
-    auto path = file.getFullPathName().toWideCharPointer();
-    HANDLE handle = ::CreateFileW(path,
-                                  GENERIC_READ,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                  nullptr,
-                                  OPEN_EXISTING,
-                                  FILE_ATTRIBUTE_NORMAL,
-                                  nullptr);
-    if (handle == INVALID_HANDLE_VALUE) {
-        error = "Could not open " + file.getFileName() + " for reading.";
-        return false;
-    }
-
-    LARGE_INTEGER fileSize{};
-    if (!::GetFileSizeEx(handle, &fileSize) || fileSize.QuadPart < 0) {
-        ::CloseHandle(handle);
-        error = "Could not read " + file.getFileName() + ".";
-        return false;
-    }
-
-    bytes.setSize(static_cast<size_t>(fileSize.QuadPart), false);
-    std::uint8_t* dest = static_cast<std::uint8_t*>(bytes.getData());
-    std::uint64_t remaining = static_cast<std::uint64_t>(fileSize.QuadPart);
-    std::uint64_t offset = 0;
-
-    while (remaining > 0) {
-        const DWORD chunk = static_cast<DWORD>(std::min<std::uint64_t>(remaining, 1u << 20));
-        DWORD read = 0;
-        if (!::ReadFile(handle, dest + offset, chunk, &read, nullptr)) {
-            ::CloseHandle(handle);
-            error = "Could not read " + file.getFileName() + ".";
-            return false;
-        }
-        if (read == 0) {
-            break;
-        }
-        remaining -= read;
-        offset += read;
-    }
-
-    bytes.setSize(static_cast<size_t>(offset), true);
-    ::CloseHandle(handle);
-    return true;
-}
-
-std::map<juce::String, juce::String> windowsVolumeRootMap() {
-    std::map<juce::String, juce::String> map;
-    DWORD bufferLength = ::GetLogicalDriveStringsW(0, nullptr);
-    if (bufferLength == 0) {
-        return map;
-    }
-
-    std::wstring drives;
-    drives.resize(bufferLength);
-    if (::GetLogicalDriveStringsW(bufferLength, drives.data()) == 0) {
-        return map;
-    }
-
-    const wchar_t* current = drives.c_str();
-    while (*current != L'\0') {
-        wchar_t volumeName[MAX_PATH + 1] = {};
-        if (::GetVolumeInformationW(current,
-                                    volumeName,
-                                    static_cast<DWORD>(std::size(volumeName)),
-                                    nullptr,
-                                    nullptr,
-                                    nullptr,
-                                    nullptr,
-                                    0)) {
-            const auto key = normaliseVolumeKey(juce::String(volumeName));
-            if (key.isNotEmpty()) {
-                map[key] = juce::String(current);
-            }
-        }
-        current += std::wcslen(current) + 1;
-    }
-    return map;
-}
-#else
-bool readSharedFileBytes(const juce::File& file, juce::MemoryBlock& bytes, juce::String& error) {
-    if (!file.loadFileAsData(bytes)) {
-        error = "Could not read " + file.getFileName() + ".";
-        return false;
-    }
-    return true;
-}
-
-std::map<juce::String, juce::String> windowsVolumeRootMap() {
-    return {};
-}
-#endif
-
-void extractSoundminerPathsFromBytes(const juce::MemoryBlock& bytes,
-                                     std::unordered_set<std::string>& uniquePaths) {
-    if (bytes.getSize() < 2) {
-        return;
-    }
-
-    auto flushRun = [&uniquePaths](const std::string& run) {
-        if (run.find("/Volumes/") == std::string::npos) {
-            return;
-        }
-
-        static const std::array<std::string, 8> extensions = {
-            ".aiff", ".flac", ".wav", ".aif", ".mp3", ".ogg", ".m4a", ".caf"
-        };
-        std::string lowerRun = run;
-        std::transform(lowerRun.begin(), lowerRun.end(), lowerRun.begin(),
-                       [] (unsigned char c) { return static_cast<char>(std::tolower(c)); });
-
-        std::size_t pos = 0;
-        while ((pos = lowerRun.find("/volumes/", pos)) != std::string::npos) {
-            std::size_t endPos = std::string::npos;
-            std::size_t extLength = 0;
-            for (const auto& ext : extensions) {
-                auto found = lowerRun.find(ext, pos);
-                if (found != std::string::npos && (endPos == std::string::npos || found < endPos)) {
-                    endPos = found;
-                    extLength = ext.length();
-                }
-            }
-
-            if (endPos == std::string::npos) {
-                break;
-            }
-
-            uniquePaths.insert(run.substr(pos, endPos + extLength - pos));
-            pos = endPos + extLength;
-        }
-    };
-
-    const auto* data = static_cast<const std::uint8_t*>(bytes.getData());
-    std::string run;
-    run.reserve(512);
-
-    for (size_t i = 0; i + 1 < bytes.getSize(); i += 2) {
-        const auto low = data[i];
-        const auto high = data[i + 1];
-        const bool printableAscii = high == 0 && low >= 32 && low <= 126;
-
-        if (printableAscii) {
-            run.push_back(static_cast<char>(low));
-            continue;
-        }
-
-        if (!run.empty()) {
-            flushRun(run);
-            run.clear();
-        }
-    }
-
-    if (!run.empty()) {
-        flushRun(run);
-    }
-}
-
-std::vector<juce::String> extractSoundminerPaths(const juce::File& file, juce::String& error) {
-    juce::MemoryBlock bytes;
-    if (!readSharedFileBytes(file, bytes, error)) {
-        return {};
-    }
-
-    std::unordered_set<std::string> uniquePaths;
-    extractSoundminerPathsFromBytes(bytes, uniquePaths);
-
-    std::vector<juce::String> paths;
-    paths.reserve(uniquePaths.size());
-    for (const auto& path : uniquePaths) {
-        paths.push_back(juce::String::fromUTF8(path.c_str()));
-    }
-
-    std::sort(paths.begin(), paths.end(), [](const juce::String& a, const juce::String& b) {
-        return a.compareNatural(b) < 0;
-    });
-    return paths;
-}
-
-juce::String resolveSoundminerPath(const juce::String& originalPath,
-                                   const std::map<juce::String, juce::String>& volumeRoots) {
-    auto trimmed = originalPath.trim();
-    if (trimmed.isEmpty()) {
-        return {};
-    }
-
-    juce::File nativeCandidate(trimmed);
-    if (nativeCandidate.existsAsFile()) {
-        return nativeCandidate.getFullPathName();
-    }
-
-    const auto unixPrefix = juce::String("/Volumes/");
-    if (!trimmed.startsWithIgnoreCase(unixPrefix)) {
-        juce::File directFile(trimmed.replaceCharacter('/', juce::File::getSeparatorChar()));
-        return directFile.existsAsFile() ? directFile.getFullPathName() : juce::String{};
-    }
-
-    auto remainder = trimmed.fromFirstOccurrenceOf(unixPrefix, false, false);
-    if (remainder.isEmpty()) {
-        return {};
-    }
-
-    const auto slash = remainder.indexOfChar('/');
-    if (slash <= 0) {
-        return {};
-    }
-
-    const auto volumeName = remainder.substring(0, slash);
-    const auto relativePath = remainder.substring(slash + 1).replaceCharacter('/', '\\');
-    const auto volumeKey = normaliseVolumeKey(volumeName);
-
-    auto it = volumeRoots.find(volumeKey);
-    if (it == volumeRoots.end()) {
-        return {};
-    }
-
-    auto candidate = juce::File(it->second).getChildFile(relativePath);
-    if (candidate.existsAsFile()) {
-        return candidate.getFullPathName();
-    }
-
-    return {};
 }
 
 bool isAudioFile(const juce::File& file, juce::AudioFormatManager& formatManager,
@@ -614,8 +283,6 @@ std::optional<LibraryDescriptor> readDescriptor(const juce::File& dbFile) {
                 if (key == "id") descriptor.id = value;
                 else if (key == "name") descriptor.name = value;
                 else if (key == "root_path") descriptor.rootFolder = juce::File(value);
-                else if (key == "soundminer_unresolved_count") descriptor.unresolvedFileCount = value.getIntValue();
-                else if (key == "soundminer_source_vdb") descriptor.isSoundminerImport = value.isNotEmpty();
             }
         }
     }
