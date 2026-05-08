@@ -53,6 +53,7 @@ jobs:
           STAGE="dist/Triggerfish 1.0"
           mkdir -p "$STAGE"
           cp -R "${{ steps.locate.outputs.app_path }}" "$STAGE/"
+          cp LICENSE "$STAGE/"
           touch "$STAGE/Triggerfish.portable"
           mkdir -p "$STAGE/Data"
           ls -la "$STAGE"
