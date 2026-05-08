@@ -1920,6 +1920,26 @@ bool TriggerfishEditor::keyPressed(const juce::KeyPress& key) {
     if (key == juce::KeyPress::numberPad3) return triggerKeyboardNote(10);  // A#
     if (key == juce::KeyPress::numberPad0) return triggerKeyboardNote(11);  // B
 
+    // Letter-row chromatic mapping for laptop keyboards (no numpad on MacBooks).
+    // Bottom row Z X C V B N M = naturals C D E F G A B
+    // Row above  S D G H J     = sharps   C# D# F# G# A#
+    // Skipped when a command modifier is held so Cmd-Z (undo) etc still work.
+    if (!modifiers.isCommandDown() && !modifiers.isAltDown()) {
+        const auto letterChar = juce::CharacterFunctions::toLowerCase(textChar);
+        if (letterChar == 'z') return triggerKeyboardNote(0);   // C
+        if (letterChar == 's') return triggerKeyboardNote(1);   // C#
+        if (letterChar == 'x') return triggerKeyboardNote(2);   // D
+        if (letterChar == 'd') return triggerKeyboardNote(3);   // D#
+        if (letterChar == 'c') return triggerKeyboardNote(4);   // E
+        if (letterChar == 'v') return triggerKeyboardNote(5);   // F
+        if (letterChar == 'g') return triggerKeyboardNote(6);   // F#
+        if (letterChar == 'b') return triggerKeyboardNote(7);   // G
+        if (letterChar == 'h') return triggerKeyboardNote(8);   // G#
+        if (letterChar == 'n') return triggerKeyboardNote(9);   // A
+        if (letterChar == 'j') return triggerKeyboardNote(10);  // A#
+        if (letterChar == 'm') return triggerKeyboardNote(11);  // B
+    }
+
     // Up/Down arrows: navigate layer selection
     if (key == juce::KeyPress::upKey || key == juce::KeyPress::downKey) {
         auto sel = ctrl.selected_layer_index();
