@@ -2002,6 +2002,13 @@ void TriggerfishEditor::paint(juce::Graphics& g) {
     drawSection(layerSection, triggerfish::colours::sectionLayers);
     drawSection(recordSection, triggerfish::colours::sectionRecord);
     drawSection(focusSection, triggerfish::colours::sectionFocus);
+
+    g.setColour(triggerfish::colours::textDim.withAlpha(0.55f));
+    g.setFont(juce::FontOptions(10.0f));
+    g.drawText(juce::String::fromUTF8("\xc2\xa9 2026 Ian Nyeste \xe2\x80\x94 Triggerfish 1.0"),
+               getLocalBounds().reduced(8, 4),
+               juce::Justification::bottomRight,
+               false);
 }
 
 void TriggerfishEditor::resized() {

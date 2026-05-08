@@ -1,0 +1,43 @@
+Triggerfish 1.0
+Copyright (c) 2026 Ian Nyeste. All rights reserved.
+
+This software is provided for personal, non-commercial use only.
+
+PERMITTED USES
+You may install and run this software on devices you own or control.
+
+PROHIBITED USES
+You may not, without prior written permission from the copyright holder:
+  - Sell, sublicense, rent, lease, or otherwise distribute this software,
+    in whole or in part, for monetary or other commercial gain.
+  - Redistribute, repackage, mirror, or share copies of this software,
+    or any modified version of it, with third parties.
+  - Reverse engineer, decompile, or disassemble the software, except to
+    the extent that such activity is expressly permitted by applicable
+    law notwithstanding this limitation.
+  - Remove, obscure, or alter any copyright, trademark, attribution, or
+    other proprietary notices contained in the software.
+  - Use the software, or any portion of it, to create a derivative work
+    that is distributed publicly or commercially.
+
+DISCLAIMER OF WARRANTY
+This software is provided "AS IS", without warranty of any kind, express
+or implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose, and noninfringement. In no event shall
+the copyright holder be liable for any claim, damages, or other liability,
+whether in an action of contract, tort, or otherwise, arising from, out
+of, or in connection with the software or the use or other dealings in
+the software.
+
+THIRD-PARTY COMPONENTS
+This software incorporates the JUCE framework (https://juce.com), which
+is subject to its own license terms. Use of JUCE is governed by the
+agreement between the copyright holder and Raw Material Software Limited.
+
+This software incorporates the Signalsmith Stretch library
+(https://github.com/Signalsmith-Audio/signalsmith-stretch), which is
+distributed under the MIT License and remains subject to its own terms.
+
+CONTACT
+For licensing inquiries, including commercial use, please contact the
+copyright holder.
