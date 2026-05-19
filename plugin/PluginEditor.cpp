@@ -1198,6 +1198,15 @@ TriggerfishEditor::TriggerfishEditor(TriggerfishProcessor& p)
         processorRef.controller().toggle_layer_vst3_bypass(*sel, slotIndex);
         wirePluginSessions();
     };
+    // Critical: runs BEFORE the rack destroys/replaces the plugin in this
+    // slot. Removes the audio-thread-visible pointer first and waits for any
+    // in-flight render_block() to finish, so the destruction can't race
+    // process_block().
+    vst3Rack_.onBeforePluginChange = [this](std::size_t slotIndex) {
+        auto sel = processorRef.controller().selected_layer_index();
+        if (!sel.has_value()) return;
+        processorRef.controller().safely_unwire_layer_plugin_session(*sel, slotIndex);
+    };
 
     auxVst3Rack_.onPluginLoaded = [this](std::size_t slotIndex, const juce::String& filePath,
                                          const juce::String& classId, const juce::String& name) {
@@ -1215,6 +1224,9 @@ TriggerfishEditor::TriggerfishEditor(TriggerfishProcessor& p)
     auxVst3Rack_.onBypassToggle = [this](std::size_t slotIndex) {
         processorRef.controller().toggle_aux_vst3_bypass(slotIndex);
         wirePluginSessions();
+    };
+    auxVst3Rack_.onBeforePluginChange = [this](std::size_t slotIndex) {
+        processorRef.controller().safely_unwire_aux_plugin_session(slotIndex);
     };
 
     // Surround panner callbacks

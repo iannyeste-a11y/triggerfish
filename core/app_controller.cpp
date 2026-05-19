@@ -5046,6 +5046,33 @@ std::vector<StreamingMixer::LayerState>& AppController::streaming_layer_states()
     return streaming_layers_;
 }
 
+void AppController::safely_unwire_layer_plugin_session(
+    std::size_t layer_index, std::size_t slot_index) {
+    if (layer_index >= streaming_layers_.size()) {
+        return;
+    }
+    if (slot_index >= StreamingMixer::kMaxPluginSlots) {
+        return;
+    }
+    auto& layer = streaming_layers_[layer_index];
+    layer.plugin_sessions[slot_index] = nullptr;
+    layer.plugin_bypassed[slot_index] = false;
+    // Release fence so the audio thread sees the nullptr write before its
+    // next sequenced load of rendering_ (which the wait below pairs with).
+    std::atomic_thread_fence(std::memory_order_release);
+    if (streaming_active_) {
+        streaming_mixer_.wait_for_render_idle();
+    }
+}
+
+void AppController::safely_unwire_aux_plugin_session(std::size_t slot_index) {
+    streaming_mixer_.set_aux_plugin_session(slot_index, nullptr, false);
+    std::atomic_thread_fence(std::memory_order_release);
+    if (streaming_active_) {
+        streaming_mixer_.wait_for_render_idle();
+    }
+}
+
 void AppController::push_live_gain(std::size_t layer_index) {
     if (!streaming_active_ || layer_index >= streaming_layers_.size()) {
         return;

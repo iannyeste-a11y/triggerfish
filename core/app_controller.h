@@ -487,6 +487,14 @@ public:
     std::optional<double> layer_streaming_position(std::size_t layer_index) const;
     StreamingMixer& streaming_mixer();
     std::vector<StreamingMixer::LayerState>& streaming_layer_states();
+    // Safely null out a plugin session pointer the audio thread is reading,
+    // then wait for the current audio block to finish so the caller can
+    // destroy the underlying plugin host without racing the audio thread.
+    // Use these before calling JuceVst3Host::unloadPlugin() or destroying a
+    // host. Returns immediately if streaming is not active.
+    void safely_unwire_layer_plugin_session(std::size_t layer_index, std::size_t slot_index);
+    void safely_unwire_aux_plugin_session(std::size_t slot_index);
+
     void push_live_gain(std::size_t layer_index);
     void push_live_pan(std::size_t layer_index);
     void push_live_mute(std::size_t layer_index);

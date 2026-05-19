@@ -248,6 +248,12 @@ void Vst3InsertRack::loadPluginIntoSlot(std::size_t slotIndex,
     if (!hostPtr)
         hostPtr = std::make_unique<JuceVst3Host>();
 
+    // loadPlugin() destroys any existing plugin inside this host. Make sure
+    // the audio thread is no longer pointing at it before that happens.
+    if (onBeforePluginChange) {
+        onBeforePluginChange(slotIndex);
+    }
+
     juce::String err;
     if (hostPtr->loadPlugin(filePath, classId, sampleRate_, blockSize_, err, pluginName)) {
         auto name = hostPtr->getPluginName();
@@ -264,6 +270,11 @@ void Vst3InsertRack::loadPluginIntoSlot(std::size_t slotIndex,
 
 void Vst3InsertRack::removePluginFromSlot(std::size_t slotIndex) {
     closePluginEditor(slotIndex);
+    // Unwire the audio-thread-visible pointer and wait for the audio thread
+    // to leave render_block() before destroying the plugin instance.
+    if (onBeforePluginChange) {
+        onBeforePluginChange(slotIndex);
+    }
     if (currentHosts_) {
         auto& hostPtr = (*currentHosts_)[slotIndex];
         if (hostPtr) hostPtr->unloadPlugin();

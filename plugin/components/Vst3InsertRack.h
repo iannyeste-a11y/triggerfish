@@ -42,6 +42,12 @@ public:
     std::function<void(std::size_t slotIndex)> onPluginRemoved;
     std::function<void(std::size_t slotIndex)> onBypassToggle;
 
+    // Fired BEFORE the rack destroys or replaces the plugin in a slot. Use
+    // this hook to null out any audio-thread-visible pointers to the host
+    // (e.g. StreamingMixer plugin session) and wait for the audio thread to
+    // be idle, so destroying the plugin instance can't race process_block().
+    std::function<void(std::size_t slotIndex)> onBeforePluginChange;
+
     // Access the host session for the current layer's slot.
     JuceVst3Host* getHostSession(std::size_t slot) const;
 

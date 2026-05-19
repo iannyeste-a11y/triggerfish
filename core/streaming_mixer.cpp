@@ -622,12 +622,7 @@ int StreamingMixer::record_bus_channel_count() const {
     return record_bus_channels_.load(std::memory_order_relaxed);
 }
 
-void StreamingMixer::stop() {
-    playing_.store(false, std::memory_order_seq_cst);
-    // Wait for audio thread to finish any in-progress render_block() call
-    // before we allow the caller to free/clear the layers vector.
-    // rendering_ is set BEFORE playing_ is checked in render_block(),
-    // so if the audio thread is about to access layers_, we'll see it here.
+void StreamingMixer::wait_for_render_idle() {
     int spins = 0;
     while (rendering_.load(std::memory_order_seq_cst)) {
         if (++spins > 1000000) {
@@ -636,6 +631,15 @@ void StreamingMixer::stop() {
         }
         std::this_thread::yield();
     }
+}
+
+void StreamingMixer::stop() {
+    playing_.store(false, std::memory_order_seq_cst);
+    // Wait for audio thread to finish any in-progress render_block() call
+    // before we allow the caller to free/clear the layers vector.
+    // rendering_ is set BEFORE playing_ is checked in render_block(),
+    // so if the audio thread is about to access layers_, we'll see it here.
+    wait_for_render_idle();
     layers_ = nullptr;
 }
 

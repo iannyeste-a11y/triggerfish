@@ -213,6 +213,13 @@ public:
     bool is_playing() const;
     void stop();
 
+    // Spin-waits until the audio thread is not currently inside render_block().
+    // Use this after nulling out a plugin session pointer (or any other shared
+    // resource the audio thread reads) and before destroying the resource, so
+    // the audio thread is guaranteed to see the null and skip the slot before
+    // the next render_block() begins.
+    void wait_for_render_idle();
+
     // Recording support: captures mixed output into a side buffer
     void set_recording(bool enabled);
     std::optional<RenderedAudio> take_recording();
