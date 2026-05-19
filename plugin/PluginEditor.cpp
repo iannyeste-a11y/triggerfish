@@ -3602,8 +3602,14 @@ triggerfish::PictureWindow& TriggerfishEditor::ensurePictureWindow() {
             playbackTarget_ = PlaybackTarget::Picture;
         };
         pictureWindow_->content().onLoadRequested = [this] {
+            // Empty filter on purpose: JUCE 8 still uses macOS's deprecated
+            // setAllowedFileTypes: API which silently greys out files on
+            // macOS Sonoma/Sequoia even when their extensions match. Passing
+            // an empty filter makes NSOpenPanel show every file, so users can
+            // actually select their videos. If they pick something the OS
+            // decoder can't open, the load path shows a clear error dialog.
             auto chooser = std::make_shared<juce::FileChooser>(
-                "Load Picture", juce::File(), "*.mp4;*.mov;*.m4v;*.qt");
+                "Load Picture", juce::File(), juce::String());
             chooser->launchAsync(juce::FileBrowserComponent::openMode,
                 [this, chooser](const juce::FileChooser& fc) {
                     auto file = fc.getResult();
